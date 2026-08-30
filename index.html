@@ -1,0 +1,995 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lead Search</title>
+<style>
+  :root{
+    --bg:#eef2f6;
+    --panel:#f7f9fb;
+    --panel-2:#edf1f5;
+    --line:#dce2e9;
+    --line-soft:#e7ebef;
+    --text:#182033;
+    --muted:#697487;
+    --muted-2:#8993a2;
+    --accent:#4779e8;
+    --accent-soft:rgba(71,121,232,.15);
+    --danger:#d96b6b;
+    --ease:cubic-bezier(.22,1,.36,1);
+    --duration:300ms;
+  }
+
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0;
+    min-height:100vh;
+    background:
+      radial-gradient(circle at 50% 49%, rgba(117,145,255,.18), transparent 27%),
+      linear-gradient(145deg,#edf2f6 0%,#f5f7f9 52%,#e9eef5 100%);
+    color:var(--text);
+    font-family:Inter,"SF Pro Display","SF Pro Text",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    -webkit-font-smoothing:antialiased;
+    text-rendering:optimizeLegibility;
+    overflow-x:hidden;
+  }
+
+  .search-blob{
+    position:absolute;
+    z-index:0;
+    width:430px;
+    height:430px;
+    left:50%;
+    top:50%;
+    transform:translate(-50%,-43%);
+    border-radius:50%;
+    pointer-events:none;
+    background:
+      radial-gradient(circle at 50% 50%,
+        rgba(115,178,255,.50) 0%,
+        rgba(126,181,255,.34) 29%,
+        rgba(151,184,250,.19) 51%,
+        rgba(181,195,239,.07) 68%,
+        transparent 77%);
+    filter:blur(18px);
+  }
+  .gradient-blob{
+    position:fixed;
+    z-index:0;
+    pointer-events:none;
+    border-radius:50%;
+    filter:blur(58px);
+    mix-blend-mode:multiply;
+  }
+  .blob-a{
+    width:720px;height:470px;
+    left:50%;top:16%;
+    transform:translateX(-50%);
+    background:
+      radial-gradient(ellipse at 46% 50%,
+        rgba(115,139,246,.34) 0%,
+        rgba(130,151,255,.24) 30%,
+        rgba(155,139,232,.13) 55%,
+        transparent 74%);
+    opacity:.72;
+  }
+  .blob-b{
+    width:430px;height:300px;
+    left:calc(50% + 150px);top:30%;
+    background:radial-gradient(ellipse,
+      rgba(96,145,237,.15) 0%,
+      rgba(130,126,224,.09) 45%,
+      transparent 73%);
+    filter:blur(72px);
+    opacity:.5;
+  }
+  button,input,select{font:inherit}
+  button{cursor:pointer}
+  .app{
+    position:relative;z-index:1;min-height:100vh;padding:0 28px 100px;
+  }
+  .shell{width:min(1080px,100%);margin:0 auto}
+
+  /* Hero */
+  .hero{
+    min-height:100vh;
+    width:min(1280px,100%);
+    margin:0 auto;
+    border-radius:34px;
+    background:rgba(245,248,251,.68);
+    box-shadow:
+      0 24px 65px rgba(53,72,101,.11),
+      0 5px 18px rgba(74,95,126,.06),
+      inset 0 1px 0 rgba(255,255,255,.9);
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    align-items:center;
+    transition:all var(--duration) var(--ease);
+  }
+  .hero.compact{
+    min-height:auto;
+    padding:54px 40px 38px;
+    justify-content:flex-start;
+  }
+  .hero-inner{
+    position:relative;
+    width:min(900px,100%);
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    transition:all var(--duration) var(--ease);
+  }
+  .eyebrow{
+    margin-bottom:18px;
+    color:#687386;
+    font-size:11px;
+    font-weight:700;
+    letter-spacing:.22em;
+    text-transform:uppercase;
+  }
+  h1{
+    max-width:850px;
+    margin:0 0 30px;
+    text-align:center;
+    font-size:clamp(42px,5.7vw,72px);
+    line-height:.98;
+    letter-spacing:-.055em;
+    font-weight:700;
+    transition:all var(--duration) var(--ease);
+  }
+  .compact h1{
+    font-size:30px;
+    margin-bottom:20px;
+    letter-spacing:-.035em;
+  }
+
+  /* Search */
+  .search-group{
+    position:relative;
+    z-index:2;
+    width:min(620px,100%);
+    position:relative;
+    transition:width 420ms cubic-bezier(.22,1,.36,1);
+  }
+  .search-group:focus-within{
+    width:min(790px,100%);
+  }
+  .search-bar{
+    display:flex;
+    align-items:center;
+    min-height:60px;
+    padding:6px 7px 6px 17px;
+    border:1px solid rgba(255,255,255,.78);
+    background:rgba(244,247,250,.9);
+    border-radius:999px;
+    box-shadow:0 12px 28px rgba(74,94,126,.10), 0 2px 8px rgba(76,93,119,.05);
+    transition:border-color var(--duration) var(--ease), box-shadow var(--duration) var(--ease), border-radius var(--duration) var(--ease);
+  }
+  .search-bar:focus-within{
+    border-color:rgba(77,124,255,.72);
+    box-shadow:0 0 0 3px var(--accent-soft), 0 18px 70px rgba(0,0,0,.28);
+  }
+  .search-icon{
+    width:19px;height:19px;flex:none;margin-right:12px;color:#697487;
+  }
+  .category-wrap{position:relative;flex:0 0 150px}
+  .category-select,.custom-category{
+    width:100%;
+    height:44px;
+    border:0;
+    outline:0;
+    border-radius:999px;
+    background:#e7ecf1;
+    color:#313b4d;
+    padding:0 35px 0 14px;
+    appearance:none;
+    font-size:14px;
+    font-weight:600;
+    cursor:pointer;
+  }
+  .category-wrap:after{
+    content:"";
+    position:absolute;
+    right:13px;top:18px;
+    width:7px;height:7px;
+    border-right:1.5px solid #838a94;
+    border-bottom:1.5px solid #838a94;
+    transform:rotate(45deg);
+    pointer-events:none;
+  }
+  .custom-category{display:none;padding-right:14px;cursor:text}
+  .search-divider{width:1px;height:28px;background:#c3cbd4;margin:0 14px}
+  .keyword{
+    min-width:0;
+    flex:1;
+    border:0;
+    outline:0;
+    background:transparent;
+    color:var(--text);
+    font-size:15px;
+  }
+  .keyword::placeholder,.filter-input::placeholder{color:#788394}
+  .search-btn{
+    width:46px;height:46px;
+    flex:none;
+    border:0;
+    border-radius:999px;
+    display:grid;place-items:center;
+    background:#4779e8;
+    color:#fff;
+    transition:filter var(--duration) var(--ease), transform var(--duration) var(--ease);
+  }
+  .search-btn:hover{filter:brightness(1.12)}
+  .search-btn:active{transform:translateY(1px)}
+  .search-btn svg{width:19px;height:19px}
+
+  /* Filters */
+  .filters{
+    width:min(780px,100%);
+    margin-top:10px;
+    padding:9px;
+    display:grid;
+    grid-template-columns:1fr 1fr auto;
+    gap:8px;
+    border:1px solid rgba(255,255,255,.75);
+    background:rgba(239,243,247,.72);
+    border-radius:20px;
+    transition:opacity var(--duration) var(--ease), transform var(--duration) var(--ease);
+  }
+  .filter-input,.limit-number{
+    width:100%;
+    height:42px;
+    border:1px solid transparent;
+    border-radius:11px;
+    background:rgba(228,234,240,.74);
+    color:var(--text);
+    outline:0;
+    padding:0 13px;
+    font-size:13px;
+    transition:border-color var(--duration) var(--ease),opacity var(--duration) var(--ease);
+  }
+  .filter-input:focus,.limit-number:focus{border-color:rgba(77,124,255,.65);box-shadow:0 0 0 2px var(--accent-soft)}
+  .limit-wrap{display:flex;align-items:center;gap:7px}
+  .select-field{position:relative;min-width:0}
+  .filter-select{appearance:none;-webkit-appearance:none;cursor:pointer;padding-right:34px}
+  .select-field:after{
+    content:"";position:absolute;right:14px;top:50%;width:6px;height:6px;
+    border-right:1.5px solid #737b85;border-bottom:1.5px solid #737b85;
+    transform:translateY(-65%) rotate(45deg);pointer-events:none;
+    transition:border-color var(--duration) var(--ease);
+  }
+  .select-field:focus-within:after{border-color:#aeb6c0}
+  .limit-wrap{display:flex;align-items:center;gap:7px;min-width:0}
+  .limit-select-wrap{width:116px;flex:0 0 116px}
+  .limit-number{width:72px;flex:0 0 72px;text-align:center}
+  .limit-number.disabled{opacity:.25;cursor:not-allowed}
+  .compact .filters{margin-top:8px}
+
+  /* Results */
+  .results-zone{
+    width:min(920px,100%);
+    margin:0 auto;
+    opacity:0;
+    transform:translateY(18px);
+    pointer-events:none;
+    max-height:0;
+    overflow:hidden;
+    transition:opacity var(--duration) var(--ease), transform var(--duration) var(--ease), max-height 500ms var(--ease);
+  }
+  .results-zone.visible{
+    opacity:1;
+    transform:none;
+    pointer-events:auto;
+    max-height:50000px;
+  }
+  .loading{
+    padding:35px 0;
+    display:none;
+  }
+  .loading.visible{display:block}
+  .loading-line{
+    height:2px;
+    width:100%;
+    overflow:hidden;
+    background:#e3e9ef;
+    border-radius:99px;
+  }
+  .loading-line:after{
+    content:"";
+    display:block;
+    height:100%;
+    width:32%;
+    background:#667daF;
+    animation:load 1.15s ease-in-out infinite;
+  }
+  @keyframes load{0%{transform:translateX(-120%)}100%{transform:translateX(420%)}}
+
+  .results-content{display:none}
+  .results-content.visible{display:block}
+  .summary{
+    display:flex;align-items:center;justify-content:space-between;
+    gap:18px;
+    padding:17px 2px 13px;
+    color:var(--muted);
+    font-size:12px;
+  }
+  .summary strong{color:#334055;font-weight:650}
+  .actions{display:flex;gap:7px}
+  .small-btn{
+    border:1px solid #c9d2de;
+    background:rgba(237,241,245,.82);
+    color:#556174;
+    border-radius:9px;
+    padding:8px 11px;
+    font-size:11px;
+    transition:all var(--duration) var(--ease);
+  }
+  .small-btn:hover{border-color:#4779e8;color:#4779e8;background:rgba(71,121,232,0.06)}
+  .result-list{
+    border-top:1px solid var(--line);
+  }
+  .result-row{
+    display:grid;
+    grid-template-columns:minmax(0,2fr) minmax(160px,1fr) minmax(180px,1.2fr);
+    gap:22px;
+    padding:18px 4px;
+    border-bottom:1px solid var(--line-soft);
+    transition:background var(--duration) var(--ease);
+  }
+  .result-row:hover{background:rgba(255,255,255,.018)}
+  .business-name{font-size:14px;font-weight:650;color:#202b40;margin-bottom:7px}
+  .category-tag{
+    display:inline-flex;
+    align-items:center;
+    border:1px solid #d9e0e7;
+    color:#667286;
+    background:#e8edf2;
+    border-radius:99px;
+    padding:4px 7px;
+    font-size:10px;
+  }
+  .secondary{
+    color:#6d7889;
+    font-size:12px;
+    line-height:1.55;
+    overflow-wrap:anywhere;
+  }
+  .secondary a{color:#4779e8;text-decoration:none}
+  .secondary a:hover{text-decoration:underline}
+  .empty{
+    padding:45px 10px;
+    text-align:center;
+    color:#687386;
+    border-top:1px solid var(--line);
+    border-bottom:1px solid var(--line-soft);
+    font-size:13px;
+  }
+
+  /* History */
+  .history{
+    width:min(920px,100%);
+    margin:110px auto 0;
+    display:none;
+  }
+  .history.visible{display:block}
+  .section-heading{
+    display:flex;align-items:end;justify-content:space-between;
+    margin-bottom:13px;
+  }
+  .section-heading h2{font-size:14px;margin:0;font-weight:650}
+  .section-heading span{font-size:11px;color:#646b74}
+  .history-item{
+    border-top:1px solid var(--line-soft);
+  }
+  .history-item:last-child{border-bottom:1px solid var(--line-soft)}
+  .history-head{
+    width:100%;
+    padding:16px 3px;
+    display:grid;
+    grid-template-columns:1.1fr 1.5fr 1.3fr auto;
+    gap:18px;
+    align-items:center;
+    text-align:left;
+    color:#556174;
+    background:transparent;
+    border:0;
+    transition:background var(--duration) var(--ease),color var(--duration) var(--ease);
+  }
+  .history-head:hover{background:rgba(255,255,255,.018);color:#182033}
+  .history-label{font-size:11px;color:#606770;text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px}
+  .history-value{font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .history-count{font-variant-numeric:tabular-nums}
+  .chevron{justify-self:end;width:14px;height:14px;transition:transform var(--duration) var(--ease)}
+  .history-item.open .chevron{transform:rotate(180deg)}
+  .history-body{
+    display:grid;
+    grid-template-rows:0fr;
+    transition:grid-template-rows 360ms var(--ease);
+  }
+  .history-item.open .history-body{grid-template-rows:1fr}
+  .history-inner{overflow:hidden}
+  .history-results{padding:0 3px 18px}
+  .history-results .result-row{grid-template-columns:minmax(0,2fr) minmax(160px,1fr) minmax(180px,1.2fr)}
+
+
+  .scroll-cue{
+    display:none;
+    margin-top:30px;
+    border:0;
+    background:transparent;
+    color:#8a94a3;
+    display:flex;
+    align-items:center;
+    gap:7px;
+    font-size:11px;
+    letter-spacing:.01em;
+    opacity:.72;
+    transition:opacity 300ms var(--ease), transform 300ms var(--ease);
+  }
+  .scroll-cue:hover{opacity:1;transform:translateY(2px)}
+  .scroll-cue svg{width:14px;height:14px}
+  .scroll-cue.has-history{display:flex}
+  .hero.compact .scroll-cue{opacity:0;pointer-events:none;height:0;margin:0;overflow:hidden}
+  .history.reveal-ready{
+    opacity:0;
+    transform:translateY(35px);
+  }
+  .history.visible.reveal-ready{
+    animation:historyReveal 650ms var(--ease) forwards;
+  }
+  @keyframes historyReveal{
+    from{opacity:0;transform:translateY(35px)}
+    to{opacity:1;transform:translateY(0)}
+  }
+
+  .toast{
+    position:fixed;
+    left:50%;bottom:26px;
+    transform:translate(-50%,20px);
+    padding:10px 14px;
+    border:1px solid #d0d7de;
+    background:#f6f8fa;
+    border-radius:10px;
+    color:#24292f;
+    font-size:12px;
+    box-shadow:0 12px 40px rgba(0,0,0,.15);
+    opacity:0;pointer-events:none;
+    transition:all 260ms var(--ease);
+  }
+  .toast.show{opacity:1;transform:translate(-50%,0)}
+
+  @media(max-width:760px){
+    .hero{width:100%;border-radius:24px;}
+    .app{padding:0 16px 70px}
+    .hero{min-height:92vh}
+    .search-bar{min-height:62px;padding-left:12px;border-radius:17px}
+    .category-wrap{flex-basis:130px}
+    .search-divider{margin:0 8px}
+    .search-btn{width:46px;height:46px;border-radius:13px}
+    .filters{grid-template-columns:1fr;gap:7px}
+    .limit-wrap{width:100%}
+    .limit-toggle{flex:1}
+    .limit-toggle button{flex:1}
+    .limit-number{width:90px}
+    .result-row,.history-results .result-row{grid-template-columns:1fr;gap:7px}
+    .history-head{grid-template-columns:1fr auto;gap:10px}
+    .history-head > div:nth-child(3){grid-column:1}
+    .history-head > div:nth-child(2){grid-column:1}
+    .history-head > .chevron{grid-column:2;grid-row:1/4}
+    .summary{align-items:flex-start;flex-direction:column}
+    h1{font-size:40px}
+  }
+</style>
+<style>
+  .filter-select option,
+  .category-select option{
+    background:#f1f4f7;
+    color:#263247;
+  }
+  .filter-select:focus,
+  .category-select:focus{
+    border-color:rgba(71,121,232,.45);
+    box-shadow:0 0 0 2px rgba(71,121,232,.10);
+  }
+  @media(max-width:760px){
+    .search-group,.search-group:focus-within{width:100%}
+    .search-blob{width:310px;height:310px}
+    .scroll-cue{margin-top:22px}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="gradient-blob blob-a"></div>
+  <div class="gradient-blob blob-b"></div>
+  <main class="shell">
+    <section class="hero" id="hero">
+      <div class="hero-inner"><div class="search-blob"></div>
+        <div class="eyebrow">Lead generation search</div>
+        <h1 id="headline">Find businesses worth talking to.</h1>
+
+        <form class="search-group" id="searchForm">
+          <div class="search-bar">
+            <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+              <circle cx="11" cy="11" r="6.8"></circle><path d="m16.2 16.2 4.1 4.1"></path>
+            </svg>
+
+            <div class="category-wrap" id="categoryWrap">
+              <select class="category-select" id="category">
+                <option value="Restaurants">Restaurants</option>
+                <option value="office=estate_agent">Real estate agencies</option>
+                <option value="office=lawyer">Law firms</option>
+                <option value="amenity=dentist">Dentists</option>
+                <option value="office=advertising">Marketing agencies</option>
+                <option value="office=construction">Construction companies</option>
+                <option value="Hotels">Hotels</option>
+                <option value="office=it">Software companies</option>
+                <option value="custom">Custom...</option>
+              </select>
+              <input class="custom-category" id="customCategory" type="text" placeholder="Custom category">
+            </div>
+
+            <div class="search-divider"></div>
+            <input class="keyword" id="keyword" type="text" placeholder="Filter by keyword (e.g. name or street)" autocomplete="off">
+            <button class="search-btn" type="submit" aria-label="Search">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="6.5"></circle><path d="m16 16 4.3 4.3"></path>
+              </svg>
+            </button>
+          </div>
+
+          <div class="filters">
+            <div class="select-field">
+              <select class="filter-input filter-select" id="country" required>
+                <option value="">Country *</option>
+              </select>
+            </div>
+            <div class="select-field">
+              <select class="filter-input filter-select" id="city">
+                <option value="">City (optional)</option>
+              </select>
+            </div>
+            <div class="limit-wrap">
+              <div class="select-field limit-select-wrap">
+                <select class="filter-input filter-select" id="limitMode">
+                  <option value="capped">Capped</option>
+                  <option value="disabled">Disabled</option>
+                </select>
+              </div>
+              <input class="limit-number" id="limitNumber" type="number" min="1" max="1000" value="50" aria-label="Result limit">
+            </div>
+          </div>
+        </form>
+        <button class="scroll-cue" id="scrollCue" type="button" aria-label="See previous searches">
+          <span>Scroll to session history</span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">
+            <path d="m6 9 6 6 6-6"></path>
+          </svg>
+        </button>
+      </div>
+    </section>
+
+    <section class="results-zone" id="resultsZone">
+      <div class="loading" id="loading">
+        <div class="loading-line"></div>
+      </div>
+      <div class="results-content" id="resultsContent">
+        <div class="summary">
+          <div id="summaryText"></div>
+          <div class="actions">
+            <button class="small-btn" id="downloadBtn" type="button">Download CSV</button>
+            <button class="small-btn" id="keepBtn" type="button">Keep in session</button>
+          </div>
+        </div>
+        <div class="result-list" id="resultList"></div>
+      </div>
+    </section>
+
+    <section class="history" id="history">
+      <div class="section-heading">
+        <h2>Previous searches</h2>
+        <span>Current session only</span>
+      </div>
+      <div id="historyList"></div>
+    </section>
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(() => {
+  const headlines = [
+    "Find businesses worth talking to.",
+    "Find your next good lead.",
+    "Search anywhere. Find what matters.",
+    "Turn a location into a prospect list.",
+    "Start with a market. Leave with leads.",
+    "Find the businesses your pipeline needs.",
+    "Search smarter. Prospect faster.",
+    "Who should you be talking to next?"
+  ];
+
+  const state = {
+    history: [],
+    currentResults: [],
+    limitMode: "capped"
+  };
+
+  const $ = id => document.getElementById(id);
+  const hero = $("hero");
+  const category = $("category");
+  const categoryWrap = $("categoryWrap");
+  const customCategory = $("customCategory");
+  const keyword = $("keyword");
+  const country = $("country");
+  const city = $("city");
+  const limitNumber = $("limitNumber");
+  const resultsZone = $("resultsZone");
+  const loading = $("loading");
+  const resultsContent = $("resultsContent");
+  const resultList = $("resultList");
+  const summaryText = $("summaryText");
+  const history = $("history");
+  const historyList = $("historyList");
+  const toast = $("toast");
+
+  const locations = {
+    "Pakistan":["Karachi","Lahore","Islamabad","Rawalpindi","Faisalabad","Multan","Peshawar","Quetta","Gujranwala","Sialkot","Hyderabad","Bahawalpur","Sargodha","Abbottabad","Sukkur","Mardan","Mingora","Gujrat","Sheikhupura","Rahim Yar Khan"],
+    "India":["Mumbai","Delhi","Bengaluru","Hyderabad","Chennai","Kolkata","Pune","Ahmedabad","Jaipur","Surat","Lucknow","Kanpur","Nagpur","Indore","Bhopal","Patna","Chandigarh","Kochi","Coimbatore","Goa"],
+    "United States":["New York","Los Angeles","Chicago","Houston","Phoenix","Philadelphia","San Antonio","San Diego","Dallas","Austin","Seattle","Boston","Denver","Atlanta","Miami","San Francisco","Washington","Las Vegas","Portland","Charlotte"],
+    "United Kingdom":["London","Manchester","Birmingham","Liverpool","Leeds","Bristol","Glasgow","Edinburgh","Cardiff","Belfast","Sheffield","Nottingham","Leicester","Coventry","Newcastle"],
+    "Canada":["Toronto","Vancouver","Montreal","Calgary","Edmonton","Ottawa","Winnipeg","Quebec City","Halifax","Victoria"],
+    "Australia":["Sydney","Melbourne","Brisbane","Perth","Adelaide","Canberra","Gold Coast","Newcastle","Hobart","Darwin"],
+    "United Arab Emirates":["Dubai","Abu Dhabi","Sharjah","Ajman","Al Ain","Ras Al Khaimah"],
+    "Saudi Arabia":["Riyadh","Jeddah","Mecca","Medina","Dammam","Khobar","Taif","Tabuk"],
+    "Qatar":["Doha","Al Rayyan","Al Wakrah","Umm Salal"],
+    "Bangladesh":["Dhaka","Chattogram","Khulna","Rajshahi","Sylhet","Rangpur","Mymensingh","Barisal"],
+    "Turkey":["Istanbul","Ankara","Izmir","Bursa","Antalya","Adana","Konya","Gaziantep"],
+    "Germany":["Berlin","Hamburg","Munich","Cologne","Frankfurt","Stuttgart","Düsseldorf","Leipzig","Dortmund","Bremen"],
+    "France":["Paris","Marseille","Lyon","Toulouse","Nice","Nantes","Strasbourg","Montpellier","Bordeaux","Lille"],
+    "Spain":["Madrid","Barcelona","Valencia","Seville","Zaragoza","Malaga","Bilbao","Alicante"],
+    "Italy":["Rome","Milan","Naples","Turin","Palermo","Genoa","Bologna","Florence","Venice"],
+    "Netherlands":["Amsterdam","Rotterdam","The Hague","Utrecht","Eindhoven","Groningen"],
+    "Singapore":["Singapore"],
+    "Malaysia":["Kuala Lumpur","George Town","Johor Bahru","Ipoh","Shah Alam","Malacca"],
+    "Indonesia":["Jakarta","Surabaya","Bandung","Medan","Semarang","Makassar","Denpasar"],
+    "Japan":["Tokyo","Osaka","Kyoto","Yokohama","Nagoya","Sapporo","Fukuoka","Kobe"],
+    "South Korea":["Seoul","Busan","Incheon","Daegu","Daejeon","Gwangju","Suwon"],
+    "China":["Beijing","Shanghai","Guangzhou","Shenzhen","Chengdu","Chongqing","Hangzhou","Wuhan","Xi'an"],
+    "South Africa":["Johannesburg","Cape Town","Durban","Pretoria","Port Elizabeth","Bloesmfontein"],
+    "Nigeria":["Lagos","Abuja","Kano","Ibadan","Port Harcourt","Benin City"],
+    "Egypt":["Cairo","Alexandria","Giza","Luxor","Aswan","Port Said"],
+    "Brazil":["São Paulo","Rio de Janeiro","Brasília","Salvador","Belo Horizonte","Curitiba","Recife"],
+    "Mexico":["Mexico City","Guadalajara","Monterrey","Puebla","Cancún","Tijuana","Mérida"],
+    "New Zealand":["Auckland","Wellington","Christchurch","Hamilton","Tauranga","Dunedin"],
+    "Ireland":["Dublin","Cork","Limerick","Galway","Waterford"],
+    "Switzerland":["Zurich","Geneva","Basel","Bern","Lausanne","Lucerne"],
+    "Sweden":["Stockholm","Gothenburg","Malmö","Uppsala"],
+    "Norway":["Oslo","Bergen","Trondheim","Stavanger"],
+    "Denmark":["Copenhagen","Aarhus","Odense","Aalborg"],
+    "Portugal":["Lisbon","Porto","Braga","Coimbra","Faro"],
+    "Greece":["Athens","Thessaloniki","Patras","Heraklion"],
+    "Thailand":["Bangkok","Chiang Mai","Phuket","Pattaya","Pattani"],
+    "Vietnam":["Ho Chi Minh City","Hanoi","Da Nang","Hai Phong","Nha Trang"],
+    "Philippines":["Manila","Quezon City","Cebu City","Davao City","Makati"],
+    "Kenya":["Nairobi","Mombasa","Kisumu","Nakuru"],
+    "Morocco":["Casablanca","Rabat","Marrakesh","Tangier","Fes"],
+    "Austria":["Vienna","Graz","Salzburg","Innsbruck","Linz"],
+    "Belgium":["Brussels","Antwerp","Ghent","Bruges","Leuven"],
+    "Poland":["Warsaw","Krakow","Wroclaw","Gdansk","Poznan","Lodz"],
+    "Czech Republic":["Prague","Brno","Ostrava","Plzen"],
+    "Romania":["Bucharest","Cluj-Napoca","Timisoara","Iasi"],
+    "Hungary":["Budapest","Debrecen","Szeged","Pecs"],
+    "Argentina":["Buenos Aires","Cordoba","Rosario","Mendoza","La Plata"],
+    "Chile":["Santiago","Valparaiso","Concepcion","Antofagasta"],
+    "Colombia":["Bogota","Medellin","Cali","Barranquilla","Cartagena"],
+    "Peru":["Lima","Arequipa","Trujillo","Cusco"],
+    "Israel":["Tel Aviv","Jerusalem","Haifa","Rishon LeZion","Eilat"]
+  };
+
+  const countrySelect = $("country");
+  const citySelect = $("city");
+
+  Object.keys(locations).sort().forEach(name => {
+    const option = document.createElement("option");
+    option.value = name;
+    option.textContent = name;
+    countrySelect.appendChild(option);
+  });
+
+  countrySelect.value = "Pakistan";
+
+  function populateCities(countryName){
+    const previous = citySelect.value;
+    citySelect.innerHTML = '<option value="">City (optional)</option>';
+    (locations[countryName] || []).forEach(name => {
+      const option = document.createElement("option");
+      option.value = name;
+      option.textContent = name;
+      citySelect.appendChild(option);
+    });
+    if((locations[countryName] || []).includes(previous)) citySelect.value = previous;
+  }
+  populateCities("Pakistan");
+
+  countrySelect.addEventListener("change", () => populateCities(countrySelect.value));
+
+  $("headline").textContent = headlines[Math.floor(Math.random() * headlines.length)];
+
+  category.addEventListener("change", () => {
+    if(category.value === "custom"){
+      category.style.display = "none";
+      customCategory.style.display = "block";
+      customCategory.focus();
+    }
+  });
+
+  customCategory.addEventListener("blur", () => {
+    if(!customCategory.value.trim()){
+      customCategory.style.display = "none";
+      category.style.display = "block";
+      category.value = "Restaurants";
+    }
+  });
+
+  const limitMode = $("limitMode");
+  limitMode.addEventListener("change", () => {
+    state.limitMode = limitMode.value;
+    const disabled = state.limitMode === "disabled";
+    limitNumber.disabled = disabled;
+    limitNumber.classList.toggle("disabled", disabled);
+  });
+
+  $("searchForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const countryVal = country.value.trim();
+    if(!countryVal){
+      country.focus();
+      showToast("Country is required.");
+      return;
+    }
+
+    let catVal = category.value;
+    let isCustomCategory = false;
+    if (catVal === "custom") {
+      catVal = customCategory.value.trim();
+      isCustomCategory = true;
+    } else if (catVal.includes("=")) {
+      isCustomCategory = true;
+    }
+
+    if(!catVal){
+      customCategory.focus();
+      showToast("Enter a custom category.");
+      return;
+    }
+
+    hero.classList.add("compact");
+    resultsZone.classList.add("visible");
+    loading.classList.add("visible");
+    resultsContent.classList.remove("visible");
+    resultList.innerHTML = "";
+
+    try {
+      const limitVal = state.limitMode === "disabled" ? 9999 : (parseInt(limitNumber.value) || 50);
+      const cityVal = city.value.trim();
+
+      const apiUrl = window.location.protocol.startsWith('http') ? '/search' : 'http://127.0.0.1:8000/search';
+      const response = await fetch(apiUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          country: countryVal,
+          city: cityVal || null,
+          category: catVal,
+          is_custom_category: isCustomCategory,
+          limit_mode: state.limitMode,
+          limit_value: limitVal,
+          output_mode: "session",
+          format: "json"
+        })
+      });
+
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({ detail: response.statusText }));
+        throw new Error(errData.detail || "Search failed");
+      }
+
+      const data = await response.json();
+      const rawResults = data.results || [];
+
+      // Backend already returns cleaned top-level phone, website, address, and category fields
+      const processedResults = rawResults.map(item => {
+        const phone = (item.phone && item.phone !== "—") ? item.phone : "—";
+        const website = (item.website && item.website !== "—") ? item.website : "—";
+        
+        let address = item.address || "";
+        if (!address.trim()) {
+          address = (item.lat && item.lon) ? `${Number(item.lat).toFixed(5)}, ${Number(item.lon).toFixed(5)}` : "—";
+        }
+
+        return {
+          osm_id: item.osm_id,
+          name: item.name || "Unnamed Business",
+          brand: "—",
+          lat: item.lat,
+          lon: item.lon,
+          category: item.category || catVal.split('=').pop(),
+          phone,
+          website,
+          address
+        };
+      });
+
+      // Client-side keyword filtering
+      const kwVal = keyword.value.trim().toLowerCase();
+      let finalResults = processedResults;
+      if (kwVal) {
+        finalResults = processedResults.filter(r => {
+          return (
+            r.name.toLowerCase().includes(kwVal) ||
+            r.brand.toLowerCase().includes(kwVal) ||
+            r.address.toLowerCase().includes(kwVal) ||
+            r.category.toLowerCase().includes(kwVal) ||
+            r.phone.toLowerCase().includes(kwVal) ||
+            r.website.toLowerCase().includes(kwVal)
+          );
+        });
+      }
+
+      state.currentResults = finalResults;
+      loading.classList.remove("visible");
+      resultsContent.classList.add("visible");
+      renderResults(finalResults);
+
+      addHistory({
+        category: catVal.split('=').pop(),
+        keyword: keyword.value.trim() || "General search",
+        country: countryVal,
+        city: cityVal,
+        results: finalResults
+      });
+
+      resultsZone.scrollIntoView({behavior:"smooth", block:"start"});
+
+    } catch (err) {
+      console.error(err);
+      loading.classList.remove("visible");
+      resultList.innerHTML = `<div class="empty" style="color: var(--danger)">Error: ${err.message}</div>`;
+      resultsContent.classList.add("visible");
+      showToast(`Error: ${err.message}`);
+    }
+  });
+
+  function renderResults(results){
+    summaryText.innerHTML = `<strong>${results.length} results found</strong>`;
+    resultList.innerHTML = results.length ? results.map(resultRow).join("") :
+      `<div class="empty">No businesses matched this search.</div>`;
+  }
+
+  function resultRow(r){
+    const webLink = r.website !== "—" 
+      ? `<br><a href="${escAttr(r.website.startsWith('http') ? r.website : 'http://' + r.website)}" target="_blank" rel="noopener">${esc(r.website.replace(/^https?:\/\/(www\.)?/, ""))}</a>`
+      : "";
+    return `
+      <div class="result-row">
+        <div>
+          <div class="business-name">${esc(r.name)}</div>
+          <span class="category-tag">${esc(r.category)}</span>
+        </div>
+        <div class="secondary">${esc(r.phone)}${webLink}</div>
+        <div class="secondary">${esc(r.address)}</div>
+      </div>`;
+  }
+
+  function addHistory(item){
+    state.history.unshift({...item, timestamp:new Date()});
+    renderHistory();
+  }
+
+  function renderHistory(){
+    if(!state.history.length){
+      history.classList.remove("visible");
+      $("scrollCue").classList.remove("has-history");
+      return;
+    }
+    history.classList.add("visible");
+    $("scrollCue").classList.add("has-history");
+    historyList.innerHTML = state.history.map((item, index) => `
+      <div class="history-item" data-index="${index}">
+        <button class="history-head" type="button">
+          <div>
+            <div class="history-label">Category</div>
+            <div class="history-value">${esc(item.category)}</div>
+          </div>
+          <div>
+            <div class="history-label">Search</div>
+            <div class="history-value">${esc(item.keyword)}</div>
+          </div>
+          <div>
+            <div class="history-label">Region · results</div>
+            <div class="history-value">${esc(item.city ? item.city + ", " + item.country : item.country)} · <span class="history-count">${item.results.length}</span> · ${formatTime(item.timestamp)}</div>
+          </div>
+          <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m6 9 6 6 6-6"></path></svg>
+        </button>
+        <div class="history-body">
+          <div class="history-inner">
+            <div class="history-results">${item.results.map(resultRow).join("")}</div>
+          </div>
+        </div>
+      </div>
+    `).join("");
+
+    historyList.querySelectorAll(".history-head").forEach(head => {
+      head.addEventListener("click", () => {
+        const item = head.closest(".history-item");
+        const wasOpen = item.classList.contains("open");
+        historyList.querySelectorAll(".history-item.open").forEach(x => x.classList.remove("open"));
+        if(!wasOpen) item.classList.add("open");
+      });
+    });
+  }
+
+  $("downloadBtn").addEventListener("click", () => {
+    if(!state.currentResults.length) return;
+    const header = ["Business Name","Category","Phone","Website","Address","OSM ID","Latitude","Longitude"];
+    const rows = state.currentResults.map(r => [r.name,r.category,r.phone,r.website,r.address,r.osm_id,r.lat,r.lon]);
+    const csv = [header,...rows].map(row => row.map(v => `"${String(v ?? '').replace(/"/g,'""')}"`).join(",")).join("\n");
+    const blob = new Blob([csv], {type:"text/csv;charset=utf-8"});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `leads_${city.value || country.value || 'export'}_${Date.now()}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast("Results exported.");
+  });
+
+  $("keepBtn").addEventListener("click", () => {
+    showToast("Results are already kept in this browser session.");
+  });
+
+  function showToast(message){
+    toast.textContent = message;
+    toast.classList.add("show");
+    clearTimeout(showToast.timer);
+    showToast.timer = setTimeout(() => toast.classList.remove("show"), 2200);
+  }
+
+  function formatTime(date){
+    return date.toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"});
+  }
+  function esc(s){
+    return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
+  }
+  function escAttr(s){ return esc(s); }
+
+  keyword.addEventListener("keydown", e => {
+    if(e.key === "Enter") $("searchForm").requestSubmit();
+  });
+
+  $("scrollCue").addEventListener("click", () => {
+    history.scrollIntoView({behavior:"smooth", block:"start"});
+  });
+
+  const historyObserver = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if(entry.isIntersecting && state.history.length){
+        history.classList.add("reveal-ready");
+        requestAnimationFrame(() => history.classList.add("visible"));
+        historyObserver.unobserve(entry.target);
+      }
+    });
+  }, {threshold:.12});
+
+  historyObserver.observe(history);
+})();
+</script>
+</body>
+</html>
